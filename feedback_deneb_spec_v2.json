@@ -1,0 +1,1125 @@
+{
+  "$schema": "https://vega.github.io/schema/vega/v6.json",
+  "autosize": {
+    "type": "fit",
+    "contains": "padding"
+  },
+  "padding": 15,
+  "background": "#fafafa",
+  "signals": [
+    {
+      "name": "f",
+      "update": "clamp(width / 1100, 0.85, 1.7)"
+    },
+    {
+      "name": "cellGap",
+      "update": "round(8 * f)"
+    },
+    {
+      "name": "headH",
+      "update": "round(78 * f)"
+    },
+    {
+      "name": "panelGap",
+      "update": "round(24 * f)"
+    },
+    {
+      "name": "gridAreaW",
+      "update": "(width - 30) * 0.62"
+    },
+    {
+      "name": "cellW",
+      "update": "floor(max(40, min((gridAreaW - 8 * cellGap) / 9, ((height - 30 - headH - 5 * cellGap) / 6) / 0.6)))"
+    },
+    {
+      "name": "cellH",
+      "update": "floor(clamp((height - 30 - headH - 5 * cellGap) / 6, cellW * 0.6, cellW * 0.95))"
+    },
+    {
+      "name": "gridW",
+      "update": "9 * cellW + 8 * cellGap"
+    },
+    {
+      "name": "gridH",
+      "update": "6 * cellH + 5 * cellGap"
+    },
+    {
+      "name": "panelX",
+      "update": "gridW + panelGap"
+    },
+    {
+      "name": "panelW",
+      "update": "max(320, width - 30 - panelX)"
+    },
+    {
+      "name": "panelH",
+      "update": "gridH"
+    },
+    {
+      "name": "hoverWeek",
+      "value": null,
+      "on": [
+        {
+          "events": "@cell:pointerover",
+          "update": "datum.week"
+        },
+        {
+          "events": "@cell:pointerout",
+          "update": "null"
+        }
+      ]
+    },
+    {
+      "name": "sankTop",
+      "update": "round(46 * f)"
+    },
+    {
+      "name": "sankH",
+      "update": "max(110, panelH * 0.40)"
+    },
+    {
+      "name": "legendY",
+      "update": "sankTop + sankH + 24 * f"
+    },
+    {
+      "name": "circlesY",
+      "update": "legendY + 30 * f"
+    },
+    {
+      "name": "gapPx",
+      "update": "round(10 * f)"
+    },
+    {
+      "name": "nodeW",
+      "update": "round(12 * f)"
+    },
+    {
+      "name": "colX",
+      "update": "[panelW * 0.27, panelW * 0.5, panelW * 0.71]"
+    },
+    {
+      "name": "sS",
+      "update": "length(data('wk')) ? (data('wk')[0].res || 0) : 0"
+    },
+    {
+      "name": "sU",
+      "update": "length(data('wk')) ? (data('wk')[0].ref || 0) : 0"
+    },
+    {
+      "name": "sR",
+      "update": "length(data('wk')) ? (data('wk')[0].com || 0) : 0"
+    },
+    {
+      "name": "sG",
+      "update": "length(data('wk')) ? (data('wk')[0].rec || 0) : 0"
+    },
+    {
+      "name": "k",
+      "update": "(sS + sU + sR) > 0 ? (sankH - 2 * gapPx) / (sS + sU + sR) : 0"
+    },
+    {
+      "name": "yU0",
+      "update": "sS * k + gapPx"
+    },
+    {
+      "name": "yR0",
+      "update": "yU0 + sU * k + gapPx"
+    },
+    {
+      "name": "yT0",
+      "update": "sS * k + gapPx * 1.5"
+    }
+  ],
+  "data": [
+    {
+      "name": "dataset"
+    },
+    {
+      "name": "weeklySun",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": [
+            "week"
+          ],
+          "fields": [
+            "feedback_received"
+          ],
+          "ops": [
+            "sum"
+          ],
+          "as": [
+            "solarGen"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "days",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "lookup",
+          "from": "weeklySun",
+          "key": "week",
+          "fields": [
+            "week"
+          ],
+          "values": [
+            "solarGen"
+          ]
+        },
+        {
+          "type": "fold",
+          "fields": [
+            "complaints_received",
+            "feedback_referred"
+          ],
+          "as": [
+            "source",
+            "kwh"
+          ]
+        },
+        {
+          "type": "stack",
+          "groupby": [
+            "week",
+            "weekday"
+          ],
+          "sort": {
+            "field": "source"
+          },
+          "field": "kwh",
+          "as": [
+            "y0",
+            "y1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "activeWeek",
+      "source": "days",
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "hoverWeek != null && datum.week == hoverWeek"
+        }
+      ]
+    },
+    {
+      "name": "activeDaily",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "hoverWeek != null && datum.week == hoverWeek"
+        }
+      ]
+    },
+    {
+      "name": "wk",
+      "source": "activeDaily",
+      "transform": [
+        {
+          "type": "aggregate",
+          "fields": [
+            "feedback_received",
+            "feedback_resolved",
+            "feedback_referred",
+            "complaints_received"
+          ],
+          "ops": [
+            "sum",
+            "sum",
+            "sum",
+            "sum"
+          ],
+          "as": [
+            "rec",
+            "res",
+            "ref",
+            "com"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "nodes",
+      "values": [
+        {
+          "id": "rec",
+          "label": "Feedback Received",
+          "col": 0
+        },
+        {
+          "id": "res",
+          "label": "Resolved on the Spot",
+          "col": 1
+        },
+        {
+          "id": "ref",
+          "label": "Referred for Action",
+          "col": 1
+        },
+        {
+          "id": "com",
+          "label": "Complaints",
+          "col": 1
+        },
+        {
+          "id": "fol",
+          "label": "Cases for Follow-up",
+          "col": 2
+        }
+      ],
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "hoverWeek != null"
+        },
+        {
+          "type": "formula",
+          "as": "value",
+          "expr": "datum.id == 'rec' ? sG : datum.id == 'res' ? sS : datum.id == 'ref' ? sU : datum.id == 'com' ? sR : sU + sR"
+        },
+        {
+          "type": "formula",
+          "as": "y0",
+          "expr": "datum.id == 'ref' ? yU0 : datum.id == 'com' ? yR0 : datum.id == 'fol' ? yT0 : 0"
+        },
+        {
+          "type": "formula",
+          "as": "h",
+          "expr": "datum.value * k"
+        },
+        {
+          "type": "formula",
+          "as": "x",
+          "expr": "colX[datum.col]"
+        }
+      ]
+    },
+    {
+      "name": "links",
+      "values": [
+        {
+          "from": "rec",
+          "to": "res"
+        },
+        {
+          "from": "rec",
+          "to": "ref"
+        },
+        {
+          "from": "ref",
+          "to": "fol"
+        },
+        {
+          "from": "com",
+          "to": "fol"
+        }
+      ],
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "hoverWeek != null"
+        },
+        {
+          "type": "formula",
+          "as": "value",
+          "expr": "datum.to == 'res' ? sS : datum.from == 'com' ? sR : sU"
+        },
+        {
+          "type": "formula",
+          "as": "thick",
+          "expr": "datum.value * k"
+        },
+        {
+          "type": "filter",
+          "expr": "datum.value > 0"
+        },
+        {
+          "type": "formula",
+          "as": "sy0",
+          "expr": "datum.to == 'res' ? 0 : datum.from == 'rec' ? sS * k : datum.from == 'ref' ? yU0 : yR0"
+        },
+        {
+          "type": "formula",
+          "as": "ty0",
+          "expr": "datum.to == 'res' ? 0 : datum.to == 'ref' ? yU0 : datum.from == 'ref' ? yT0 : yT0 + sU * k"
+        },
+        {
+          "type": "formula",
+          "as": "sourceX",
+          "expr": "(datum.from == 'rec' ? colX[0] : colX[1]) + nodeW"
+        },
+        {
+          "type": "formula",
+          "as": "targetX",
+          "expr": "datum.to == 'fol' ? colX[2] : colX[1]"
+        },
+        {
+          "type": "formula",
+          "as": "sourceY",
+          "expr": "datum.sy0 + datum.thick / 2"
+        },
+        {
+          "type": "formula",
+          "as": "targetY",
+          "expr": "datum.ty0 + datum.thick / 2"
+        },
+        {
+          "type": "linkpath",
+          "orient": "horizontal",
+          "shape": "diagonal",
+          "sourceX": "sourceX",
+          "sourceY": "sourceY",
+          "targetX": "targetX",
+          "targetY": "targetY"
+        }
+      ]
+    }
+  ],
+  "scales": [
+    {
+      "name": "x",
+      "type": "point",
+      "domain": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "range": [
+        0,
+        {
+          "signal": "cellW"
+        }
+      ]
+    },
+    {
+      "name": "y",
+      "type": "linear",
+      "domain": {
+        "data": "days",
+        "field": "y1"
+      },
+      "range": [
+        {
+          "signal": "cellH"
+        },
+        {
+          "signal": "cellH * 0.28"
+        }
+      ],
+      "zero": true
+    },
+    {
+      "name": "color",
+      "type": "ordinal",
+      "domain": [
+        "feedback_referred",
+        "complaints_received"
+      ],
+      "range": [
+        "#009DDC",
+        "#E8743B"
+      ]
+    },
+    {
+      "name": "nodeColor",
+      "type": "ordinal",
+      "domain": [
+        "rec",
+        "res",
+        "ref",
+        "com",
+        "fol"
+      ],
+      "range": [
+        "#073848",
+        "#7FD1F0",
+        "#009DDC",
+        "#E8743B",
+        "#4d9078"
+      ]
+    },
+    {
+      "name": "skyColor",
+      "type": "linear",
+      "domain": {
+        "data": "weeklySun",
+        "field": "solarGen"
+      },
+      "range": [
+        "#f3f5f7",
+        "#d6f0fb"
+      ]
+    },
+    {
+      "name": "sunRadius",
+      "type": "sqrt",
+      "domain": {
+        "data": "weeklySun",
+        "field": "solarGen"
+      },
+      "range": [
+        2,
+        {
+          "signal": "max(6, cellW / 10)"
+        }
+      ],
+      "zero": true
+    },
+    {
+      "name": "xActive",
+      "type": "band",
+      "domain": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "range": [
+        20,
+        {
+          "signal": "panelW - 20"
+        }
+      ],
+      "padding": 0.3
+    },
+    {
+      "name": "yActive",
+      "type": "linear",
+      "domain": {
+        "data": "days",
+        "field": "y1"
+      },
+      "range": [
+        {
+          "signal": "panelH - 30 * f"
+        },
+        {
+          "signal": "circlesY + 24 * f"
+        }
+      ],
+      "zero": true
+    },
+    {
+      "name": "sunSize",
+      "type": "linear",
+      "domain": {
+        "data": "dataset",
+        "field": "feedback_received"
+      },
+      "range": [
+        0,
+        {
+          "signal": "420 * f * f"
+        }
+      ],
+      "zero": true
+    }
+  ],
+  "marks": [
+    {
+      "type": "text",
+      "interactive": false,
+      "encode": {
+        "update": {
+          "x": {
+            "value": 0
+          },
+          "y": {
+            "value": 0
+          },
+          "baseline": {
+            "value": "top"
+          },
+          "text": {
+            "value": "Listening to Communities"
+          },
+          "fontSize": {
+            "signal": "26 * f"
+          },
+          "fill": {
+            "value": "#243746"
+          },
+          "fontWeight": {
+            "value": "bold"
+          }
+        }
+      }
+    },
+    {
+      "type": "text",
+      "interactive": false,
+      "encode": {
+        "update": {
+          "x": {
+            "value": 0
+          },
+          "y": {
+            "signal": "34 * f"
+          },
+          "baseline": {
+            "value": "top"
+          },
+          "text": {
+            "value": "Weekly feedback and complaints, 2024 (synthetic practice data)"
+          },
+          "fontSize": {
+            "signal": "13 * f"
+          },
+          "fill": {
+            "value": "#6b7a8c"
+          }
+        }
+      }
+    },
+    {
+      "type": "text",
+      "interactive": false,
+      "encode": {
+        "update": {
+          "x": {
+            "value": 0
+          },
+          "y": {
+            "signal": "55 * f"
+          },
+          "baseline": {
+            "value": "top"
+          },
+          "text": {
+            "value": "Design inspired by Ying Fu's 'Energy Under Changing Skies'"
+          },
+          "fontSize": {
+            "signal": "9.5 * f"
+          },
+          "fill": {
+            "value": "#a0aab5"
+          },
+          "fontStyle": {
+            "value": "italic"
+          }
+        }
+      }
+    },
+    {
+      "type": "group",
+      "name": "detail",
+      "interactive": false,
+      "encode": {
+        "update": {
+          "x": {
+            "signal": "panelX"
+          },
+          "y": {
+            "signal": "headH"
+          },
+          "width": {
+            "signal": "panelW"
+          },
+          "height": {
+            "signal": "panelH"
+          },
+          "fill": {
+            "signal": "hoverWeek == null ? null : '#ffffff'"
+          },
+          "stroke": {
+            "signal": "hoverWeek == null ? '#e3e6ea' : '#d9d9d9'"
+          },
+          "strokeDash": {
+            "signal": "hoverWeek == null ? [4, 4] : []"
+          },
+          "cornerRadius": {
+            "value": 4
+          }
+        }
+      },
+      "marks": [
+        {
+          "type": "text",
+          "encode": {
+            "update": {
+              "x": {
+                "signal": "panelW / 2"
+              },
+              "y": {
+                "signal": "panelH / 2"
+              },
+              "align": {
+                "value": "center"
+              },
+              "baseline": {
+                "value": "middle"
+              },
+              "text": {
+                "signal": "hoverWeek == null ? ['Hover over a week', 'to see its case flow and daily detail'] : ''"
+              },
+              "fontSize": {
+                "signal": "13 * f"
+              },
+              "fontStyle": {
+                "value": "italic"
+              },
+              "fill": {
+                "value": "#8796A8"
+              }
+            }
+          }
+        },
+        {
+          "type": "text",
+          "encode": {
+            "update": {
+              "x": {
+                "signal": "12 * f"
+              },
+              "y": {
+                "signal": "12 * f"
+              },
+              "baseline": {
+                "value": "top"
+              },
+              "text": {
+                "signal": "hoverWeek == null ? '' : 'WEEK ' + hoverWeek"
+              },
+              "fontSize": {
+                "signal": "16 * f"
+              },
+              "fontWeight": {
+                "value": "bold"
+              },
+              "fill": {
+                "value": "#073848"
+              }
+            }
+          }
+        },
+        {
+          "type": "text",
+          "encode": {
+            "update": {
+              "x": {
+                "signal": "12 * f"
+              },
+              "y": {
+                "signal": "legendY"
+              },
+              "baseline": {
+                "value": "top"
+              },
+              "align": {
+                "value": "left"
+              },
+              "text": {
+                "signal": "hoverWeek == null ? '' : 'Daily cases  \u00b7  circles: navy = received, light blue = resolved on the spot'"
+              },
+              "fontSize": {
+                "signal": "10 * f"
+              },
+              "fill": {
+                "value": "#8796A8"
+              }
+            }
+          }
+        },
+        {
+          "type": "group",
+          "name": "sankey",
+          "encode": {
+            "update": {
+              "x": {
+                "value": 0
+              },
+              "y": {
+                "signal": "sankTop"
+              }
+            }
+          },
+          "marks": [
+            {
+              "type": "path",
+              "from": {
+                "data": "links"
+              },
+              "encode": {
+                "update": {
+                  "path": {
+                    "field": "path"
+                  },
+                  "stroke": {
+                    "scale": "nodeColor",
+                    "field": "from"
+                  },
+                  "strokeWidth": {
+                    "field": "thick"
+                  },
+                  "strokeOpacity": {
+                    "value": 0.4
+                  },
+                  "fill": {
+                    "value": null
+                  }
+                }
+              }
+            },
+            {
+              "type": "rect",
+              "from": {
+                "data": "nodes"
+              },
+              "encode": {
+                "update": {
+                  "x": {
+                    "field": "x"
+                  },
+                  "width": {
+                    "signal": "nodeW"
+                  },
+                  "y": {
+                    "field": "y0"
+                  },
+                  "height": {
+                    "field": "h"
+                  },
+                  "fill": {
+                    "scale": "nodeColor",
+                    "field": "id"
+                  },
+                  "cornerRadius": {
+                    "value": 2
+                  }
+                }
+              }
+            },
+            {
+              "type": "text",
+              "from": {
+                "data": "nodes"
+              },
+              "encode": {
+                "update": {
+                  "x": {
+                    "signal": "datum.col == 0 ? datum.x - 6 : datum.x + nodeW + 6"
+                  },
+                  "y": {
+                    "signal": "datum.y0 + datum.h / 2"
+                  },
+                  "align": {
+                    "signal": "datum.col == 0 ? 'right' : 'left'"
+                  },
+                  "baseline": {
+                    "value": "middle"
+                  },
+                  "text": {
+                    "signal": "[datum.label, format(datum.value, ',.0f') + ' cases']"
+                  },
+                  "fontSize": {
+                    "signal": "11.5 * f"
+                  },
+                  "fill": {
+                    "value": "#243746"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "rect",
+          "from": {
+            "data": "activeWeek"
+          },
+          "encode": {
+            "update": {
+              "x": {
+                "scale": "xActive",
+                "field": "weekday"
+              },
+              "width": {
+                "scale": "xActive",
+                "band": 1
+              },
+              "y": {
+                "scale": "yActive",
+                "field": "y1"
+              },
+              "y2": {
+                "scale": "yActive",
+                "field": "y0"
+              },
+              "fill": {
+                "scale": "color",
+                "field": "source"
+              }
+            }
+          }
+        },
+        {
+          "type": "symbol",
+          "from": {
+            "data": "activeDaily"
+          },
+          "encode": {
+            "update": {
+              "x": {
+                "signal": "scale('xActive', datum.weekday) + bandwidth('xActive') / 2"
+              },
+              "y": {
+                "signal": "circlesY"
+              },
+              "shape": {
+                "value": "circle"
+              },
+              "size": {
+                "scale": "sunSize",
+                "field": "feedback_received"
+              },
+              "fill": {
+                "value": "#073848"
+              }
+            }
+          }
+        },
+        {
+          "type": "symbol",
+          "from": {
+            "data": "activeDaily"
+          },
+          "encode": {
+            "update": {
+              "x": {
+                "signal": "scale('xActive', datum.weekday) + bandwidth('xActive') / 2"
+              },
+              "y": {
+                "signal": "circlesY"
+              },
+              "shape": {
+                "value": "circle"
+              },
+              "size": {
+                "scale": "sunSize",
+                "field": "feedback_resolved"
+              },
+              "fill": {
+                "value": "#7FD1F0"
+              }
+            }
+          }
+        },
+        {
+          "type": "text",
+          "from": {
+            "data": "activeDaily"
+          },
+          "encode": {
+            "update": {
+              "x": {
+                "signal": "scale('xActive', datum.weekday) + bandwidth('xActive') / 2"
+              },
+              "y": {
+                "signal": "panelH - 14 * f"
+              },
+              "align": {
+                "value": "center"
+              },
+              "baseline": {
+                "value": "middle"
+              },
+              "text": {
+                "signal": "['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][datum.weekday - 1]"
+              },
+              "fontSize": {
+                "signal": "11 * f"
+              },
+              "fill": {
+                "value": "#686963"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "name": "grid",
+      "encode": {
+        "update": {
+          "x": {
+            "value": 0
+          },
+          "y": {
+            "signal": "headH"
+          }
+        }
+      },
+      "layout": {
+        "columns": 9,
+        "padding": {
+          "signal": "cellGap"
+        },
+        "bounds": "flush"
+      },
+      "marks": [
+        {
+          "type": "group",
+          "name": "cell",
+          "from": {
+            "facet": {
+              "name": "weekData",
+              "data": "days",
+              "groupby": "week",
+              "aggregate": {
+                "fields": [
+                  "solarGen"
+                ],
+                "ops": [
+                  "max"
+                ],
+                "as": [
+                  "solarGen"
+                ]
+              }
+            }
+          },
+          "sort": {
+            "field": "datum.week"
+          },
+          "encode": {
+            "update": {
+              "width": {
+                "signal": "cellW"
+              },
+              "height": {
+                "signal": "cellH"
+              },
+              "fill": {
+                "scale": "skyColor",
+                "field": "solarGen"
+              },
+              "stroke": {
+                "signal": "datum.week === hoverWeek ? '#073848' : null"
+              },
+              "strokeWidth": {
+                "value": 2
+              },
+              "cursor": {
+                "value": "pointer"
+              }
+            }
+          },
+          "marks": [
+            {
+              "type": "text",
+              "interactive": false,
+              "encode": {
+                "update": {
+                  "x": {
+                    "value": 5
+                  },
+                  "y": {
+                    "signal": "max(10, cellW / 8)"
+                  },
+                  "text": {
+                    "signal": "parent.week"
+                  },
+                  "fontSize": {
+                    "signal": "max(9, cellW / 8)"
+                  },
+                  "fontWeight": {
+                    "signal": "parent.week === hoverWeek ? 700 : 400"
+                  },
+                  "fill": {
+                    "signal": "parent.week === hoverWeek ? '#4f4338' : '#8796a8'"
+                  }
+                }
+              }
+            },
+            {
+              "type": "symbol",
+              "interactive": false,
+              "encode": {
+                "update": {
+                  "x": {
+                    "signal": "cellW - max(9, cellW / 9)"
+                  },
+                  "y": {
+                    "signal": "max(9, cellW / 9)"
+                  },
+                  "shape": {
+                    "value": "circle"
+                  },
+                  "size": {
+                    "signal": "pow(scale('sunRadius', parent.solarGen), 2) * 3.14159"
+                  },
+                  "fill": {
+                    "value": "#073848"
+                  }
+                }
+              }
+            },
+            {
+              "type": "group",
+              "interactive": false,
+              "from": {
+                "facet": {
+                  "name": "series",
+                  "data": "weekData",
+                  "groupby": "source"
+                }
+              },
+              "marks": [
+                {
+                  "type": "area",
+                  "interactive": false,
+                  "from": {
+                    "data": "series"
+                  },
+                  "sort": {
+                    "field": "datum.weekday"
+                  },
+                  "encode": {
+                    "update": {
+                      "x": {
+                        "scale": "x",
+                        "field": "weekday"
+                      },
+                      "y": {
+                        "scale": "y",
+                        "field": "y1"
+                      },
+                      "y2": {
+                        "scale": "y",
+                        "field": "y0"
+                      },
+                      "fill": {
+                        "scale": "color",
+                        "field": "source"
+                      },
+                      "interpolate": {
+                        "value": "monotone"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "description": "Community feedback and complaints, weekly small multiples with hover detail. Design inspired by Ying Fu's 'Energy Under Changing Skies'."
+}
+
